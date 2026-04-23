@@ -1,0 +1,12 @@
+{
+  "name": "emma-platform",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev:api": "npm --prefix apps/api run dev",
+    "build": "npm --prefix apps/web run build && npm --prefix apps/api run build",
+    "lint:web": "npm --prefix apps/web run lint",
+    "prisma:generate": "npm --prefix apps/api run prisma:generate"
+  }
+}

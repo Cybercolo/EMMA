@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CLIENT
+  PROFESSIONAL
+  ADMIN
+  SECRETARY
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  RESCHEDULE_REQUESTED
+  COMPLETED
+  CANCELLED
+}
+
+enum ServiceModality {
+  IN_PERSON
+  VIDEO
+  HOME_VISIT
+}
+
+enum MediaType {
+  PROFILE_IMAGE
+  CERTIFICATION
+  BEFORE_IMAGE
+  AFTER_IMAGE
+}
+
+model User {
+  id                  String                @id @default(cuid())
+  email               String                @unique
+  passwordHash        String?
+  fullName            String
+  role                UserRole
+  isActive            Boolean               @default(true)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  professionalProfile ProfessionalProfile?
+  bookingsAsClient    Booking[]             @relation("ClientBookings")
+  sentMessages        Message[]             @relation("SentMessages")
+  reviews             Review[]
+  managedClinics      ProfessionalProfile[] @relation("ManagedProfessionals")
+}
+
+model ProfessionalProfile {
+  id                    String                 @id @default(cuid())
+  userId                String                 @unique
+  managerId             String?
+  slug                  String                 @unique
+  headline              String
+  bio                   String
+  location              String
+  ratingAverage         Float                  @default(0)
+  ratingCount           Int                    @default(0)
+  verificationStatus    VerificationStatus     @default(PENDING)
+  offersInPerson        Boolean                @default(true)
+  offersVideo           Boolean                @default(false)
+  offersHomeVisit       Boolean                @default(false)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  user                  User                   @relation(fields: [userId], references: [id])
+  manager               User?                  @relation("ManagedProfessionals", fields: [managerId], references: [id])
+  certifications        Certification[]
+  services              Service[]
+  mediaAssets           MediaAsset[]
+  bookings              Booking[]
+  verificationDecisions VerificationDecision[]
+}
+
+model Certification {
+  id             String              @id @default(cuid())
+  professionalId String
+  title          String
+  issuer         String
+  documentUrl    String
+  status         VerificationStatus  @default(PENDING)
+  createdAt      DateTime            @default(now())
+  professional   ProfessionalProfile @relation(fields: [professionalId], references: [id])
+}
+
+model Service {
+  id               String              @id @default(cuid())
+  professionalId   String
+  name             String
+  description      String
+  durationMin      Int
+  priceCents       Int?
+  consultationOnly Boolean             @default(false)
+  modality         ServiceModality
+  professional     ProfessionalProfile @relation(fields: [professionalId], references: [id])
+  bookings         Booking[]
+}
+
+model Booking {
+  id             String              @id @default(cuid())
+  clientId       String
+  professionalId String
+  serviceId      String
+  status         BookingStatus       @default(PENDING)
+  scheduledAt    DateTime
+  notes          String?
+  address        String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  client         User                @relation("ClientBookings", fields: [clientId], references: [id])
+  professional   ProfessionalProfile @relation(fields: [professionalId], references: [id])
+  service        Service             @relation(fields: [serviceId], references: [id])
+  review         Review?
+  conversation   Conversation?
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  bookingId String?   @unique
+  subject   String
+  createdAt DateTime  @default(now())
+  booking   Booking?  @relation(fields: [bookingId], references: [id])
+  messages  Message[]
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  bookingId String   @unique
+  authorId  String
+  rating    Int
+  body      String
+  createdAt DateTime @default(now())
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  author    User     @relation(fields: [authorId], references: [id])
+}
+
+model MediaAsset {
+  id             String              @id @default(cuid())
+  professionalId String
+  type           MediaType
+  url            String
+  caption        String?
+  verified       Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  professional   ProfessionalProfile @relation(fields: [professionalId], references: [id])
+}
+
+model VerificationDecision {
+  id             String              @id @default(cuid())
+  professionalId String
+  reviewerId     String
+  status         VerificationStatus
+  notes          String?
+  createdAt      DateTime            @default(now())
+  professional   ProfessionalProfile @relation(fields: [professionalId], references: [id])
+}
