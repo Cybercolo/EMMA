@@ -1,1 +1,1 @@
-# ELA_app
+# EMMA_app
